@@ -2,7 +2,6 @@ const { gray, bold, white, cyan, yellow } = require('colorette');
 const ansiEscapes = require('ansi-escapes');
 const readline = require('readline');
 
-let isSub = false;
 const generateSingleOption = (option) => {
     const { key, description } = option;
     const optionString = gray('> Press') + ` ${bold(white(key))} ` + gray(`${description}\n`);
@@ -30,7 +29,7 @@ const informActions = () => {
     console.log('You can now analyze your build, press c to continue...\n');
 };
 
-const writeFilterConsole = () => {
+/* const writeFilterConsole = () => {
     if (state.length) {
         const latestCompilation = state[state.length - 1];
         const data = [];
@@ -57,51 +56,63 @@ const writeFilterConsole = () => {
         });
         process.stdout.write(ansiEscapes.cursorTo(0, 1));
     }
-};
+}; */
 
-const state = [];
-const interactiveConfig = [
-    {
-        key: 'a',
-        description: 'Analyze build for performance improvements',
-        onShowMore: [],
-    },
-    {
-        key: 'p',
-        description: 'Pause compilation at a given time',
-        onShowMore: [],
-    },
-    {
-        key: 'm',
-        description: 'Filter a module and get stats on why a module was included',
-        onShowMore: [],
-    },
-    {
-        key: 'Enter',
-        description: 'Run webpack',
-        onShowMore: [],
-    },
-    {
-        key: 'q',
-        description: 'Exit interactive mode',
-        onShowMore: [],
-    },
-];
 
 const EXIT_KEY = 'q';
 const ANALYZE_KEY = 'a';
 const FILTER_KEY = 'm';
 const ENTER_KEY = '\n';
-const B_KEY = 'b';
-const C_KEY = 'c';
+const PAUSE_KEY = 'p';
 
-async function interactive(config, outputOptions) {
+const state = [];
+const interactiveConfig = [
+    {
+        key: ANALYZE_KEY,
+        description: 'Analyze build for performance improvements',
+        onShowMore: {
+            action: () => {},
+        },
+    },
+    {
+        key: PAUSE_KEY,
+        description: 'Pause compilation at a given time',
+        onShowMore: {
+            action: () => {},
+        },
+    },
+    {
+        key: FILTER_KEY,
+        description: 'Filter a module and get stats on why a module was included',
+        onShowMore: {
+            action: () => {},
+        },
+    },
+    {
+        key: ENTER_KEY,
+        description: 'Run webpack',
+        onShowMore: {
+            action: () => {},
+        },
+    },
+    {
+        key: EXIT_KEY,
+        description: 'Exit interactive mode',
+        onShowMore: {
+            action: () => {
+                console.clear();
+                process.exit();
+            }
+        },
+    },
+];
+
+modules.exports = async function run(config) {
     const stdin = process.stdin;
     stdin.setEncoding('utf-8');
     stdin.setRawMode(true);
     readline.emitKeypressEvents(stdin);
 
-    outputOptions.interactive = false;
 
     
     setupInteractive();
@@ -122,7 +133,6 @@ async function interactive(config, outputOptions) {
                 process.stdout.write(ansiEscapes.cursorPrevLine);
                 break;
             case 'return':
-                // TODO: get line and do stuff
                 break;
             default:
                 break;
@@ -130,43 +140,13 @@ async function interactive(config, outputOptions) {
     });
 
     stdin.on('data', async function (data) {
-        if (isSub === true) {
-            console.log(data, 'yo');
-            return;
-        }
-        switch (data) {
-            case C_KEY:
-                setupInteractive();
-                break;
-            case EXIT_KEY:
-                console.log('exit');
-                process.exit(0);
-            case ANALYZE_KEY:
-                console.log('analyzing modules');
-                break;
-            case FILTER_KEY:
-                isSub = true;
-                writeFilterConsole();
-                break;
-            case B_KEY:
-                console.clear();
-                stdin.setEncoding('utf-8');
-                setupInteractive();
-                break;
-            case ENTER_KEY: {
-                console.clear();
-                console.log('Running webpack');
-                if (state.length) {
-                    state.pop();
-                }
-                informActions();
-                isSub = true;
-                return;
+        interactiveConfig.forEach( prop => {
+            if(prop.key === data) {
+                console.clear()
+                prop.onShowMore.action();
+                //   console.clear();
+                // stdin.setEncoding('utf-8');
             }
-            default:
-                break;
-        }
+        })
     });
 };
-
-interactive();
